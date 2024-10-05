@@ -2,6 +2,7 @@ import streamlit as st
 
 st.logo("Logo_transdev.png", size='large')
 
+st.sidebar.write('How it works')
 
 
 st.title("🚌 Bus Planning Checker")
