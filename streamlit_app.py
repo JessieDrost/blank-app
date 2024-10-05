@@ -8,7 +8,7 @@ st.sidebar.title("Navigation")
 # Add links to the sidebar
 st.sidebar.markdown("[Bus Planning Checker]")
 st.sidebar.markdown("[How it Works]")
-st.sidebar.markdown("[Help]")st.sidebar.markdown("Hi!")
+st.sidebar.markdown("[Help]")
 
 st.title("🚌 Bus Planning Checker")
 st.write(
