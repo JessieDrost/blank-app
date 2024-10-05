@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.logo("Logo_transdev.png")
+st.logo("Logo_transdev.png", size='large')
 
 
 
