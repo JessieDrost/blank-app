@@ -2,15 +2,14 @@ import streamlit as st
 
 st.logo("Logo_transdev_klein.png", size="large", icon_image="tra_logo_rgb_LR.jpg")
 
-# Add a title to the sidebar
-st.sidebar.title("Navigation")
-
-# Add links to the sidebar
-st.sidebar.markdown(":bus: Bus Planning Checker")
-st.sidebar.markdown(":book: How it Works")
-st.sidebar.markdown(":question: Help")
 
 st.title("Bus Planning Checker")
 st.write(
     "Instantly validate your circulation planning for compliance!"
 )
+bus_checker = st.Page("bus_check.py", title="Bus Planning Checker", icon=":material/search:")
+how_work = st.Page("how_it_works.py", title="How It Works")
+help = st.Page("help.py", title="How To Use")
+
+pg = st.navigation(bus_checker, how_work, help)
+pg.run()
