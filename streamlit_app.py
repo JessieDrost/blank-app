@@ -14,7 +14,4 @@ help_page = st.Page(
 pg = st.navigation([st.Page("Bus_Planning_Checker.py"), st.Page("How_it_Works.py"), st.Page("Help.py")])
 pg.run()
 
-st.title("Bus Planning Checker")
-st.write(
-    "Instantly validate your circulation planning for compliance!"
-)
+
