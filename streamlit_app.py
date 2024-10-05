@@ -1,17 +1,6 @@
 import streamlit as st
 
-st.logo("Logo_transdev_klein.png", size='large', icon_image="tra_logo_rgb_LR.jpg")
-
-st.markdown(
-    """
-    <style>
-    .reportview-container {
-        background: url("https://brandguide.transdev.nl/files/220504-transdev-vdl-citea-huizen-0022-bewerkt-1.jpg")
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+st.logo("Logo_transdev_klein.png", size="large", icon_image="tra_logo_rgb_LR.jpg", size="large")
 
 # Add a title to the sidebar
 st.sidebar.title("Navigation")
