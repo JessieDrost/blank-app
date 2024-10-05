@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Display the logo
-st.logo("Logo_transdev_klein.png", size="large", icon_image="tra_logo_rgb_LR.jpg")
+st.logo("Logo_transdev_klein.png", size="large", icon_image="tra_logo_CMYK_HR.jpg")
 
 # Define pages
 bus_checker = st.Page("bus_check.py", title="Bus Planning Checker")
