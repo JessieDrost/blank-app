@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.logo("Logo_transdev_klein.png", size="large", icon_image="tra_logo_rgb_LR.jpg", size="large")
+st.logo("Logo_transdev_klein.png", size="large", icon_image="tra_logo_rgb_LR.jpg")
 
 # Add a title to the sidebar
 st.sidebar.title("Navigation")
