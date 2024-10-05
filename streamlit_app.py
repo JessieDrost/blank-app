@@ -6,9 +6,9 @@ st.logo("Logo_transdev_klein.png", size='large', icon_image="tra_logo_rgb_LR.jpg
 st.sidebar.title("Navigation")
 
 # Add links to the sidebar
-st.sidebar.markdown("Bus Planning Checker")
-st.sidebar.markdown("How it Works")
-st.sidebar.markdown("Help")
+st.sidebar.markdown(":bus: Bus Planning Checker")
+st.sidebar.markdown(":book: How it Works")
+st.sidebar.markdown(":question: Help")
 
 st.title("Bus Planning Checker")
 st.write(
