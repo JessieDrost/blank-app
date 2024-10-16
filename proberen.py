@@ -1,11 +1,4 @@
 import streamlit as st
-
-st.title("Bus Planning Checker")
-st.write(
-    "Instantly validate your circulation planning for compliance!"
-)
-
-import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
