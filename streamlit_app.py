@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from io import StringIO
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
@@ -429,7 +428,8 @@ def validate_schema(row: dict, time_table: pd.DataFrame, uploaded_file, actual_c
         ax.set_ylabel('Machines')
         ax.set_title('Gantt Chart for Paint Shop Scheduling')
         plt.show()
-
+        st.pyplot(fig)
+        
     def check_travel_time(bus_planning, distance_matrix):
         """
         Check if the time difference between the start time and end time in bus planning
