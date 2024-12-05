@@ -1,11 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-import statsmodels.api as sm
-from datetime import datetime
-from matplotlib.patches import Patch
 
 # STREAMLIT 
 st.image("tra_logo_rgb_HR.png", width=400)
@@ -25,6 +21,7 @@ with st.sidebar:
     SOH =                   st.slider("**State Of Health** %", 85, 95, 90)
     min_SOC =               st.slider("**Minimum State Of Charge** %", 5, 25, 10)
     consumption_per_km =    st.slider("**Battery Consumption Per KM** KwH", 0.7, 2.5, 1.6)
+   
     
 def check_batterij_status(uploaded_file, distance_matrix, SOH, min_SOC, consumption_per_km):
     max_capacity = 300 * (SOH / 100)
@@ -114,10 +111,12 @@ def check_route_continuity(bus_planning):
                 st.error(f"Route continuity issue for bus {omloop_nummer:.0f} at {next_start_time}: "
                         f"ends at {current_end_location} and next route starts at {next_start_location}.")
 
+
 def driven_rides(bus_planning):
     clean_bus_planning = bus_planning[['startlocatie', 'starttijd', 'eindlocatie', 'buslijn']]
     clean_bus_planning = clean_bus_planning.dropna(subset=['buslijn']) 
     return clean_bus_planning
+
 
 def every_ride_covered(bus_planning, time_table):
     # Ensure columns are correctly named
@@ -160,6 +159,7 @@ def every_ride_covered(bus_planning, time_table):
         return "Bus planning is equal to timetable"
 
     return True
+
 
 def check_travel_time(bus_planning, distance_matrix):
     # Check if 'starttijd' and 'eindtijd' columns exist
@@ -274,6 +274,7 @@ def plot_schedule_from_excel(bus_planning):
     ax.legend(handles=legend_elements, title='Legend')
 
     st.pyplot(fig)
+
 
 def bus_checker_page(): 
     st.title("Bus Planning Checker")
