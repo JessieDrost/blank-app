@@ -21,7 +21,8 @@ with st.sidebar:
     min_SOC =               st.slider("**Minimum State Of Charge** %", 5, 25, 10)
     consumption_per_km =    st.slider("**Battery Consumption Per KM** KwH", 0.7, 2.5, 1.6)
    
-    
+   
+# OMLOOPPLANNING VALIDEREN
 def check_batterij_status(uploaded_file, distance_matrix, SOH, min_SOC, consumption_per_km):
     max_capacity = 300 * (SOH / 100)
     min_batterij = max_capacity * (min_SOC / 100)
@@ -275,6 +276,7 @@ def plot_schedule_from_excel(bus_planning):
     st.pyplot(fig)
 
 
+# PAGINA'S DEFINIEREN
 def bus_checker_page(): 
     st.title("Bus Planning Checker")
 
@@ -400,7 +402,7 @@ def help_page():
         - **Essential columns are missing in the bus planning data**: confirm that all rides have start and end times for reliable analysis.""")
 
 
-# Page Selector
+# PAGE SELECTOR
 if page == 'Bus Planning Checker':
     bus_checker_page()
 elif page == 'How It Works':
