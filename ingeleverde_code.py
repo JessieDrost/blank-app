@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 
 # STREAMLIT 
 st.logo("tra_logo_rgb_HR.png", size='large')
-page = 'Bus Planning Checker'
+page = 'Bus Planning Checker' # Standaard pagine voordat je een knop hebt geklikt
 
+# SIDEBAR
 with st.sidebar:
     st.subheader('Navigation')
     
@@ -15,7 +16,7 @@ with st.sidebar:
         page = 'How It Works'
     if st.button('Help', icon="❓", use_container_width=True):
         page = 'Help'
-   
+
    
 # OMLOOPPLANNING VALIDEREN
 def check_batterij_status(uploaded_file, distance_matrix, SOH, min_SOC, consumption_per_km):
@@ -325,17 +326,87 @@ def plot_schedule_from_excel(bus_planning):
 
 
 # KPI's BEREKENEN
-# Total busses used
-# Total hours spend on deadhead trip
-# Total energy consumed
-# st.metric(label="Gas price", value=4, delta=-0.5, delta_color="inverse")
+def count_buses(bus_planning):
+    """Count the number of unique 'omloop nummer' values associated with rides in the given file.
+
+    Args:
+        bus_planning (pd.DataFrame): DataFrame containing the bus planning data.
+
+    Returns:
+        int: Count of unique 'omloop nummer' values.
+    """
+    # Ensure 'omloop nummer' column exists
+    if 'omloop nummer' not in bus_planning.columns:
+        raise ValueError("'omloop nummer' column not found in the data.")
+    
+    # Drop rows with NaN in 'omloop nummer'
+    valid_rows = bus_planning['omloop nummer'].dropna()
+    
+    # Count unique values
+    unique_omloop_numbers = valid_rows.unique()
+    
+    return len(unique_omloop_numbers)
+
+
+def calculate_deadhead_time(bus_planning):
+    """
+    Calculate the total amount of time spent on deadhead trips ("materiaal rit").
+
+    :param file_path: Path to the input CSV file
+    :return: Total time spent on deadhead trips in minutes
+    """
+    # Clean column names to avoid mismatches
+    bus_planning.columns = bus_planning.columns.str.strip()
+
+    # Filter rows for "materiaal rit" in the 'activiteit' column
+    deadhead_trips = bus_planning[bus_planning['activiteit'] == 'materiaal rit']
+
+    # Convert start and end time columns to datetime
+    deadhead_trips['starttijd datum'] = pd.to_datetime(deadhead_trips['starttijd datum'])
+    deadhead_trips['eindtijd datum'] = pd.to_datetime(deadhead_trips['eindtijd datum'])
+
+    # Calculate duration for each trip in minutes
+    deadhead_trips['duration_minutes'] = (deadhead_trips['eindtijd datum'] - deadhead_trips['starttijd datum']).dt.total_seconds() / 60
+
+    # Sum up all durations
+    total_deadhead_time = round(deadhead_trips['duration_minutes'].sum(),0)
+
+    return total_deadhead_time
+
+
+def calculate_energy_consumption(bus_planning, distance_matrix, consumption_per_km):
+    """
+    Calculate the total energy consumption of buses based on dynamic calculations.
+
+    :param uploaded_file: DataFrame containing trip details.
+    :param distance_matrix: DataFrame containing distance information for trips.
+    :param consumption_per_km: Energy consumption rate per kilometer (kWh/km).
+    :return: DataFrame with energy consumption per trip and total energy consumed in kWh.
+    """
+    # Ensure the time columns are in datetime format
+    bus_planning['starttijd'] = pd.to_datetime(bus_planning['starttijd'], format='%H:%M')
+    bus_planning['eindtijd'] = pd.to_datetime(bus_planning['eindtijd'], format='%H:%M')
+
+    # Merge the trip data with the distance matrix
+    df = pd.merge(bus_planning, distance_matrix, on=['startlocatie', 'eindlocatie', 'buslijn'], how='left')
+
+    # Calculate energy consumption for trips in kWh
+    df['consumptie_kWh'] = (df['afstand in meters'] / 1000) * max(consumption_per_km, 0.7)  # Apply a minimum rate
+
+    # Add specific consumption for idle trips
+    df.loc[df['activiteit'] == 'idle', 'consumptie_kWh'] = 0.01
+
+    # Calculate total energy consumption
+    total_energy_consumption = round(df['consumptie_kWh'].sum(),0)
+
+    return total_energy_consumption
 
 
 # PAGINA'S DEFINIEREN
 def bus_checker_page(): 
     st.header("Bus Planning Checker")
 
-    tab1, tab2, tab3, tab4 = st.tabs(['Data and Parameters', 'Your Data', 'Validity Checks', 'KPIs'])
+    tab1, tab2, tab3 = st.tabs(['Data and Parameters', 'Your Data', 'Validity Checks'])
     
     with tab1:
         # File uploaders
@@ -348,9 +419,9 @@ def bus_checker_page():
             given_data = st.file_uploader("Upload Your Time Table Here", type="xlsx")
         
         st.subheader('Parameters')
-        SOH =                   st.slider("**State Of Health** %", 85, 95, 90)
-        min_SOC =               st.slider("**Minimum State Of Charge** %", 5, 25, 10)
-        consumption_per_km =    st.slider("**Battery Consumption Per KM** KwH", 0.7, 2.5, 1.6)
+        SOH =                   st.slider("**State Of Health** - %", 85, 95, 90)
+        min_SOC =               st.slider("**Minimum State Of Charge** - %", 5, 25, 10)
+        consumption_per_km =    st.slider("**Battery Consumption Per KM** - KwH", 0.7, 2.5, 1.6)
 
     with tab2:
         # Check if the required files are uploaded
@@ -379,6 +450,30 @@ def bus_checker_page():
                     return
 
     with tab3:
+            # Dislay KPIs
+            st.subheader('KPIs')
+            met_col1, met_col2, met_col3 = st.columns(3)
+
+            try:
+                buses_used = count_buses(bus_planning)  
+                met_col1.metric('Total Buses Used', buses_used, delta=(buses_used - 20), delta_color="inverse")
+            except Exception as e:
+                st.error(f'Something went wrong displaying buses: {str(e)}')
+
+            try:
+                deadhead_minutes = calculate_deadhead_time(bus_planning)  
+                met_col2.metric('Total Deadhead Trips In Minutes', deadhead_minutes)
+            except Exception as e:
+                st.error(f'Something went wrong displaying deadhead time: {str(e)}')
+            
+            try: 
+                energy_cons = calculate_energy_consumption(bus_planning, distance_matrix, consumption_per_km)
+                met_col3.metric('Total Energy Consumed in kW', energy_cons)
+            except Exception as e:
+                st.error(f'Something went wrong displaying energy consumption: {str(e)}')
+                
+            st.divider()
+            
             # Check Batterij Status
             st.subheader('Battery Status')
             try: 
@@ -436,9 +531,8 @@ def bus_checker_page():
                         st.dataframe(travel_time)  
             except Exception as e:
                 st.error(f'Something went wrong checking the travel time: {str(e)}')
-    with tab4:
-        st.write('check KPI')
-                
+    
+                   
 def how_it_works_page():
     st.header("How It Works")
 
