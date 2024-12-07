@@ -31,66 +31,52 @@ def check_batterij_status(bus_planning, distance_matrix, SOH, min_SOC, consumpti
     df = pd.merge(bus_planning, distance_matrix, on=['startlocatie', 'eindlocatie', 'buslijn'], how='left')
 
     # Energieverbruik berekenen met minimumwaarde
-    df['consumptie_kWh'] = (df['afstand in meters'] / 1000) * max(consumption_per_km, 0.7)
+    df['consumptie (kWh)'] = (df['afstand in meters'] / 1000) * max(consumption_per_km, 0.7)
 
     # Idle verbruik
-    df.loc[df['activiteit'] == 'idle', 'consumptie_kWh'] = 0.01
+    df.loc[df['activiteit'] == 'idle', 'consumptie (kWh)'] = 0.01
 
     # Laadsnelheden
     charging_speed_90 = 450 / 60
     charging_speed_10 = 60 / 60
 
     battery_level = max_capacity
-    vorig_omloopnummer = df['omloop nummer'].iloc[0]
+    vorig_omloopnummer = None
 
-    # DataFrame to store rows that fail the check
     issues = []
 
     for i, row in df.iterrows():
-        next_start_time = bus_planning.at[i + 1, 'starttijd'] if i + 1 < len(bus_planning) else None
+        next_start_time = bus_planning['starttijd'].iloc[i + 1] if i + 1 < len(bus_planning) else None
 
         # Nieuwe omloop controle
         if row['omloop nummer'] != vorig_omloopnummer:
-            battery_level -= row['consumptie_kWh']
-            battery_level = max(battery_level, 0)
-            battery_level = max_capacity
+            battery_level = max_capacity  # Reset battery at the start of a new route
 
         # Opladen
         if row['activiteit'] == 'opladen':
-            start_time = row['starttijd']
-            end_time = row['eindtijd']
-            charging_duration = (end_time - start_time).total_seconds() / 60
-
-            if battery_level <= (SOH * 0.9):
-                charge_power = charging_speed_90 * charging_duration
-            else:
-                charge_power = charging_speed_10 * charging_duration
-
+            charging_duration = (row['eindtijd'] - row['starttijd']).total_seconds() / 60
+            charge_power = (charging_speed_90 if battery_level <= (SOH * 0.9) else charging_speed_10) * charging_duration
             battery_level = min(battery_level + charge_power, max_capacity)
         else:
-            battery_level -= row['consumptie_kWh']
-            battery_level = max(battery_level, 0)  # Zorg dat batterij niet negatief wordt
+            battery_level -= row['consumptie (kWh)']
 
-        # df opstellen
-        for i in range(len(bus_planning) - 1):
-            omloop_nummer_val = bus_planning.at[i, 'omloop nummer']
-            start_time_val = bus_planning.at[i , 'starttijd']  
-            consumption_val = bus_planning.at[i , 'consumptie_kWh'] 
+        battery_level = max(battery_level, 0)  # Zorg dat batterij niet negatief wordt
 
         if battery_level < min_batterij:
-            # Add the problematic rows to the issues list
-            issues.append({
-                'omloop nummer': omloop_nummer_val,
-                'starttijd': start_time_val,
-                'consumptie (kWh)': consumption_val
-            })
+            issues.append(row)
 
+        vorig_omloopnummer = row['omloop nummer']
 
-    # Create a DataFrame with failed rows
+    if not issues:
+        return pd.DataFrame()  # Return empty DataFrame if no issues
+
     failed_df = pd.DataFrame(issues)
+    required_columns = ['omloop nummer', 'starttijd', 'consumptie (kWh)']
+    missing_columns = set(required_columns) - set(failed_df.columns)
+    if missing_columns:
+        raise ValueError(f"Missing columns in output DataFrame: {missing_columns}")
 
-    # Filter to return only the specified columns
-    return failed_df[['omloop nummer', 'starttijd', 'consumptie_kWh']]
+    return failed_df[required_columns]
     
 
 def check_route_continuity(bus_planning):
@@ -400,13 +386,13 @@ def calculate_energy_consumption(bus_planning, distance_matrix, consumption_per_
     df = pd.merge(bus_planning, distance_matrix, on=['startlocatie', 'eindlocatie', 'buslijn'], how='left')
 
     # Calculate energy consumption for trips in kWh
-    df['consumptie_kWh'] = (df['afstand in meters'] / 1000) * max(consumption_per_km, 0.7)  # Apply a minimum rate
+    df['consumptie (kWh)'] = (df['afstand in meters'] / 1000) * max(consumption_per_km, 0.7)  # Apply a minimum rate
 
     # Add specific consumption for idle trips
-    df.loc[df['activiteit'] == 'idle', 'consumptie_kWh'] = 0.01
+    df.loc[df['activiteit'] == 'idle', 'consumptie (kWh)'] = 0.01
 
     # Calculate total energy consumption
-    total_energy_consumption = round(df['consumptie_kWh'].sum(),0)
+    total_energy_consumption = round(df['consumptie (kWh)'].sum(),0)
 
     return total_energy_consumption
 
@@ -425,7 +411,7 @@ def bus_checker_page():
         with col1:
             uploaded_file = st.file_uploader("Upload Your Bus Planning Here", type="xlsx")
         with col2:
-            given_data = st.file_uploader("Upload Your Timetable Here", type="xlsx")
+            given_data = st.file_uploader("Upload Your Time Table Here", type="xlsx")
         
         st.subheader('Parameters')
         SOH =                   st.slider("**State Of Health** - %", 85, 95, 90)
