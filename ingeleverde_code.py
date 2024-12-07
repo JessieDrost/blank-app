@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 
 # STREAMLIT 
 st.logo("tra_logo_rgb_HR.png", size='large')
@@ -17,7 +18,6 @@ with st.sidebar:
     if st.button('Help', icon="❓", use_container_width=True):
         page = 'Help'
 
-   
 # OMLOOPPLANNING VALIDEREN
 def check_batterij_status(bus_planning, distance_matrix, SOH, min_SOC, consumption_per_km):
     max_capacity = 300 * (SOH / 100)
@@ -80,12 +80,6 @@ def check_batterij_status(bus_planning, distance_matrix, SOH, min_SOC, consumpti
     
 
 def check_route_continuity(bus_planning):
-    """
-    Check if the endpoint of route n matches the start point of route n+1.
-    Parameters:
-        - bus_planning: DataFrame with route data.
-    Output: Returns a DataFrame with rows where inconsistencies are found.
-    """
 
     # DataFrame to store rows with issues
     issues = []
@@ -101,26 +95,35 @@ def check_route_continuity(bus_planning):
         st.error(f"Missing columns in 'bus_planning': {missing_columns}")
         return pd.DataFrame()  # Return empty DataFrame
 
-    # Check for NaN values in critical columns
-    if bus_planning[['omloop nummer', 'startlocatie', 'eindlocatie', 'starttijd']].isnull().any().any():
-        st.error("NaN values found in critical columns of 'bus_planning'.")
+    # Check for NaN values in critical columns only
+    critical_na = bus_planning[['omloop nummer', 'startlocatie', 'eindlocatie', 'starttijd']].isnull().any()
+    if critical_na.any():
+        st.error(f"NaN values found in critical columns: {critical_na[critical_na].index.tolist()}")
         return pd.DataFrame()  # Return empty DataFrame
+
+    # Sort by 'omloop nummer' and 'starttijd' to ensure correct order
+    bus_planning = bus_planning.sort_values(by=['omloop nummer', 'starttijd']).reset_index(drop=True)
 
     # Check route continuity
     for i in range(len(bus_planning) - 1):
-        current_end_location = bus_planning.at[i, 'eindlocatie']
-        next_start_location = bus_planning.at[i + 1, 'startlocatie']
-        omloop_nummer = bus_planning.at[i, 'omloop nummer']
-        next_start_time = bus_planning.at[i + 1, 'starttijd']  # Start time of the next route
+        current_row = bus_planning.iloc[i]
+        next_row = bus_planning.iloc[i + 1]
 
-        if current_end_location != next_start_location:
-            # Add the problematic rows to the issues list
-            issues.append({
-                'omloop nummer': omloop_nummer,
-                'current_end_location': current_end_location,
-                'next_start_location': next_start_location,
-                'next_start_time': next_start_time
-            })
+        current_end_location = current_row['eindlocatie']
+        next_start_location = next_row['startlocatie']
+        omloop_nummer = current_row['omloop nummer']
+        next_start_time = next_row['starttijd']  # Start time of the next route
+
+        # Ensure continuity only within the same 'omloop nummer'
+        if omloop_nummer == next_row['omloop nummer']:
+            if current_end_location != next_start_location:
+                # Add the problematic rows to the issues list
+                issues.append({
+                    'omloop nummer': omloop_nummer,
+                    'current_end_location': current_end_location,
+                    'next_start_location': next_start_location,
+                    'next_start_time': next_start_time
+                })
 
     # Create a DataFrame with the issues
     issues_df = pd.DataFrame(issues)
@@ -306,7 +309,6 @@ def plot_schedule_from_excel(bus_planning):
     ax.set_ylabel('Bus Number')
     ax.set_title('Gantt Chart for Bus Scheduling')
 
-    from matplotlib.patches import Patch
     legend_elements = [
         Patch(facecolor='blue', edgecolor='black', label='Regular trip 400'),
         Patch(facecolor='yellow', edgecolor='black', label='Regular trip 401'),
