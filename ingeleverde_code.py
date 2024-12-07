@@ -19,16 +19,16 @@ with st.sidebar:
 
    
 # OMLOOPPLANNING VALIDEREN
-def check_batterij_status(uploaded_file, distance_matrix, SOH, min_SOC, consumption_per_km):
+def check_batterij_status(bus_planning, distance_matrix, SOH, min_SOC, consumption_per_km):
     max_capacity = 300 * (SOH / 100)
     min_batterij = max_capacity * (min_SOC / 100)
 
     # Verwerk tijd
-    uploaded_file['starttijd'] = pd.to_datetime(uploaded_file['starttijd'], format='%H:%M')
-    uploaded_file['eindtijd'] = pd.to_datetime(uploaded_file['eindtijd'], format='%H:%M')
+    bus_planning['starttijd'] = pd.to_datetime(bus_planning['starttijd'], format='%H:%M')
+    bus_planning['eindtijd'] = pd.to_datetime(bus_planning['eindtijd'], format='%H:%M')
 
     # DataFrame samenvoegen
-    df = pd.merge(uploaded_file, distance_matrix, on=['startlocatie', 'eindlocatie', 'buslijn'], how='left')
+    df = pd.merge(bus_planning, distance_matrix, on=['startlocatie', 'eindlocatie', 'buslijn'], how='left')
 
     # Energieverbruik berekenen met minimumwaarde
     df['consumptie_kWh'] = (df['afstand in meters'] / 1000) * max(consumption_per_km, 0.7)
@@ -47,7 +47,7 @@ def check_batterij_status(uploaded_file, distance_matrix, SOH, min_SOC, consumpt
     issues = []
 
     for i, row in df.iterrows():
-        next_start_time = uploaded_file.at[i + 1, 'starttijd'] if i + 1 < len(uploaded_file) else None
+        next_start_time = bus_planning.at[i + 1, 'starttijd'] if i + 1 < len(bus_planning) else None
 
         # Nieuwe omloop controle
         if row['omloop nummer'] != vorig_omloopnummer:
@@ -71,11 +71,20 @@ def check_batterij_status(uploaded_file, distance_matrix, SOH, min_SOC, consumpt
             battery_level -= row['consumptie_kWh']
             battery_level = max(battery_level, 0)  # Zorg dat batterij niet negatief wordt
 
-        if battery_level < min_batterij:
-            # Append the failing row to the failed_checks list
-            issues.append(row)
+        # df opstellen
+        for i in range(len(bus_planning) - 1):
+            omloop_nummer_val = bus_planning.at[i, 'omloop nummer']
+            start_time_val = bus_planning.at[i , 'starttijd']  
+            consumption_val = bus_planning.at[i , 'consumptie_kWh'] 
 
-        vorig_omloopnummer = row['omloop nummer']
+        if battery_level < min_batterij:
+            # Add the problematic rows to the issues list
+            issues.append({
+                'omloop nummer': omloop_nummer_val,
+                'starttijd': start_time_val,
+                'consumptie (kWh)': consumption_val
+            })
+
 
     # Create a DataFrame with failed rows
     failed_df = pd.DataFrame(issues)
@@ -416,7 +425,7 @@ def bus_checker_page():
         with col1:
             uploaded_file = st.file_uploader("Upload Your Bus Planning Here", type="xlsx")
         with col2:
-            given_data = st.file_uploader("Upload Your Time Table Here", type="xlsx")
+            given_data = st.file_uploader("Upload Your Timetable Here", type="xlsx")
         
         st.subheader('Parameters')
         SOH =                   st.slider("**State Of Health** - %", 85, 95, 90)
